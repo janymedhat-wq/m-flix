@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medhat Films - Cultural Archive</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', '"Helvetica Neue"', 'Arial', '"Noto Sans"', 'sans-serif', '"Apple Color Emoji"', '"Segoe UI Emoji"', '"Segoe UI Symbol"', '"Noto Color Emoji"'],
+                    },
+                    colors: {
+                        'primary-red': '#E50914', /* Netflix Red */
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Define the theme colors for a high-contrast, minimal aesthetic */
+        :root {
+            --bg-color: #000000;
+            --text-color: #ffffff;
+            --accent-color: #E50914; /* Red accent for class and focus */
+            --overlay-color: rgba(0, 0, 0, 0.98);
+            --poster-shadow: 0 10px 30px rgba(255, 255, 255, 0.05); 
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background-color 0.5s ease, color 0.5s ease;
+            /* Add padding-top to account for the fixed header */
+            padding-top: 100px; 
+        }
+
+        /* --- FIXED NAVBAR STYLING (Including the Blur Effect) --- */
+        .fixed-navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 100;
+            transition: background-color 0.3s ease;
+        }
+
+        /* Class added by JS when scrolling */
+        .scrolled {
+            background-color: rgba(0, 0, 0, 0.9);
+            /* The key Netflix-like blur effect */
+            backdrop-filter: blur(8px); 
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+
+        /* --- TITLE STYLING (Multi-phase simulation) --- */
+        .cultural-title {
+            font-family: var(--font-sans);
+            font-weight: 900;
+            line-height: 1.1;
+            overflow: hidden; 
+            white-space: nowrap; 
+            border-right: 0.15em solid var(--accent-color); /* Red Blinking caret */
+            width: 0; 
+            animation: 
+                blink-caret 0.75s step-end infinite; 
+        }
+
+        /* Typewriter keyframes */
+        @keyframes typing {
+            from { width: 0 }
+            to { width: 100% }
+        }
+
+        /* Caret blink keyframes */
+        @keyframes blink-caret {
+            from, to { border-color: transparent }
+            50% { border-color: var(--accent-color); }
+        }
+
+        /* Keyframes for smooth transitions in the typewriter effect */
+        @keyframes fade-out {
+            to { opacity: 0; }
+        }
+        
+        /* --- MOVIE CARD STYLING & ANIMATION --- */
+
+        /* Keyframes for the staggered entrance animation */
+        @keyframes card-entrance {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Wrapper for the card to handle z-index and positioning of the pop-up */
+        .card-wrapper {
+            /* Existing smooth transition for the scaling of the poster itself */
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            z-index: 1; /* Base z-index */
+            outline: none; 
+            margin-bottom: 2rem; /* Add space for the pop-up below the grid */
+
+            /* Staggered entrance animation properties */
+            opacity: 0; /* Start hidden for animation */
+            animation: card-entrance 0.6s ease-out forwards;
+        }
+        
+        /* Stagger the animation timing using nth-child */
+        .card-wrapper:nth-child(1) { animation-delay: 0.1s; }
+        .card-wrapper:nth-child(2) { animation-delay: 0.2s; }
+        .card-wrapper:nth-child(3) { animation-delay: 0.3s; }
+        .card-wrapper:nth-child(4) { animation-delay: 0.4s; }
+        .card-wrapper:nth-child(5) { animation-delay: 0.5s; }
+        .card-wrapper:nth-child(6) { animation-delay: 0.6s; }
+        .card-wrapper:nth-child(7) { animation-delay: 0.7s; }
+
+        /* Apply scaling to the poster on hover/focus */
+        .card-wrapper:hover,
+        .card-wrapper:focus-within {
+            transform: scale(1.15); /* Scale up prominently */
+            z-index: 50; /* Bring forward to overlap others */
+            box-shadow: white;
+        }
+
+        /* Base poster size/shape */
+        .movie-card {
+            aspect-ratio: 2 / 3; 
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            border-radius: 0.5rem; 
+            box-shadow: var(--poster-shadow);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .movie-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: filter 0.3s ease;
+        }
+
+        /* Apply a subtle dark filter on hover */
+        .card-wrapper:hover img,
+        .card-wrapper:focus-within img {
+            filter: brightness(70%);
+        }
+        
+        /* --- HORIZONTAL POP-UP PANEL STYLING --- */
+        .horizontal-pop-up {
+            position: absolute;
+            top: 100%; /* Position it immediately below the main poster card */
+            /* We'll use JS/CSS for dynamic width and left position */
+            width: 300%; /* Make it span wide initially (3x card width) */
+            max-width: 1000px; /* Cap the max width for desktop */
+            height: 200px; /* Fixed height for a distinct horizontal look */
+            background-color: var(--overlay-color);
+            border-radius: 0.5rem;
+            border: 2px solid var(--accent-color);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, transform 0.3s ease, visibility 0s 0.3s;
+            transform: translateY(-20px) scale(0.95); /* Start slightly smaller and higher */
+            z-index: 60; /* Higher than the card itself */
+        }
+
+        /* Reveal pop-up on hover/focus */
+        .card-wrapper:hover .horizontal-pop-up,
+        .card-wrapper:focus-within .horizontal-pop-up {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0) scale(1);
+            transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0.1s, visibility 0s;
+        }
+        
+        /* --- TRANSFORM ORIGIN LOGIC (To handle positioning across the grid) --- */
+        /* Note: For the wide horizontal pop-up, we override the card-wrapper's scaling origin,
+           and then we use the nth-child below to shift the LEFT position of the pop-up. */
+
+        /* DESKTOP (4 columns) - Shift the POP-UP element based on its column position */
+        @media (min-width: 768px) {
+            .card-wrapper:nth-child(4n + 1) .horizontal-pop-up {
+                left: 0%; /* Aligns the left edge of the pop-up with the card's left edge */
+            }
+            .card-wrapper:nth-child(4n + 2) .horizontal-pop-up {
+                left: calc(0% - 100%); /* Shifts the pop-up one column left */
+            }
+            .card-wrapper:nth-child(4n + 3) .horizontal-pop-up {
+                left: calc(0% - 200%); /* Shifts the pop-up two columns left */
+            }
+            .card-wrapper:nth-child(4n + 4) .horizontal-pop-up {
+                left: calc(0% - 250%); /* Shifts pop-up left to ensure its right edge is near the row end */
+            }
+        }
+
+        /* MOBILE (2 columns) - Shift the POP-UP element based on its column position */
+        @media (max-width: 767px) {
+             .horizontal-pop-up {
+                height: 150px; /* Slightly smaller pop-up on mobile */
+                width: 250%; /* Adjusted width for better fit on mobile */
+             }
+            .card-wrapper:nth-child(2n + 1) .horizontal-pop-up {
+                left: 0%; 
+            }
+            .card-wrapper:nth-child(2n + 2) .horizontal-pop-up {
+                left: calc(0% - 150%); /* Shifts the pop-up left to align its right edge near the row end */
+            }
+        }
+    
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- FIXED NETFLIX-LIKE NAV BAR WITH BLUR EFFECT -->
+    <nav id="fixedNavbar" class="fixed-navbar py-4 px-6 md:px-12 transition duration-300 ease-in-out">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <!-- Logo/Title Area -->
+            <div class="flex items-center space-x-4">
+                <h1 class="text-3xl font-extrabold text-primary-red">M</h1>
+                <span class="hidden md:inline text-xl font-semibold text-white tracking-wider">MEDHAT FILMS</span>
+            </div>
+            
+            <!-- Search Bar -->
+            <div class="relative w-full max-w-lg md:max-w-md">
+                <input type="text" id="movieSearchInput" placeholder="Search movies, roles, or years..." 
+                       class="w-full py-2 pl-4 pr-10 bg-white/10 text-white border border-white/20 rounded-full 
+                              focus:outline-none focus:ring-2 focus:ring-primary-red focus:border-primary-red transition duration-200 
+                              placeholder-white/50 text-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                </svg>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Main Content Container (Centered and Max Width) -->
+    <div class="max-w-7xl mx-auto space-y-16 sm:space-y-24 p-6 sm:p-12 md:p-16">
+
+        <!-- GLOBAL HEADER / TITLE -->
+        <header class="text-center pt-8">
+            <h1 id="culturalTitle" class="cultural-title text-5xl sm:text-7xl md:text-8xl font-extrabold text-white uppercase mx-auto" style="max-width: fit-content;">
+                <!-- Initial text, will be replaced by JS -->
+            </h1>
+            <p class="text-xl sm:text-3xl font-bold mt-2 mb-10 tracking-widest text-primary-red/70">
+                A CULTURAL ARCHIVE OF CINEMATIC WORKS
+            </p>
+            <p class="text-base sm:text-lg leading-relaxed max-w-3xl mx-auto border-y border-white/30 py-4 px-2 text-white/70">
+                EXPLORING IDENTITY, SOCIETY, AND ABSTRACT HUMAN CONNECTION ACROSS GLOBAL CULTURES.
+            </p>
+        </header>
+
+        <!-- Horizontal Rule Separator -->
+        <hr class="my-10 border-t border-primary-red/20">
+
+        <!-- MOVIE GRID SECTION -->
+        <section id="movies">
+          <center> <h2 class="text-3xl sm:text-4xl font-extrabold tracking-widest text-white mb-8 border-b border-white/30 pb-2 inline-block">
+                CORE FILMOGRAPHY
+            </h2>
+            </center> 
+            <!-- Grid for Movie Posters (Responsive: 2 columns on mobile, 4 on medium/desktop) -->
+            <div id="movieGrid" class="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
+                
+                <!-- MOVIE CARD 1 - "In the Mood for Connection" -->
+                <div class="card-wrapper rounded-lg" tabindex="0" data-title="In the Mood for Connection" data-year="2024" data-role="Lead Actor / Producer">
+                    <div class="movie-card">
+                        <!-- Placeholder images used for demonstration -->
+                        <img src="dir.png" alt="In the Mood for Connection Poster">
+                    </div>
+                    <!-- New Horizontal Detail Panel -->
+                    <div class="horizontal-pop-up flex p-4 shadow-2xl">
+                        <div class="w-2/5 h-full rounded-l-md overflow-hidden mr-4">
+                             <!-- Expanded Image Preview -->
+                             <img src="dir.png" alt="In the Mood for Connection Preview" class="w-full h-full object-cover">
+                        </div>
+                        <div class="w-3/5 space-y-2">
+                            <h3 class="text-2xl font-bold text-primary-red">IN THE MOOD FOR CONNECTION</h3>
+                            <p class="text-xs text-white/70">2024 (Venice Film Festival) | ROLE: LEAD ACTOR / PRODUCER</p>
+                           <p class="text-sm italic text-white/90">
+DESCRIPTION: A poetic exploration of two souls adrift in a digitized society, where silence becomes more intimate than words, and every glance carries the weight of a confession.  
+</p>
+
+                            <button class="px-3 py-1 bg-primary-red text-black font-semibold rounded-full text-xs hover:bg-white transition">
+                                VIEW DETAILS
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MOVIE CARD 2 - "American Prometheus" -->
+                <div class="card-wrapper rounded-lg" tabindex="0" data-title="American Prometheus" data-year="2023" data-role="Cinematographer">
+                    <div class="movie-card">
+                         <!-- Placeholder images used for demonstration -->
+                        <img src="oppenheimer.png" alt="A Life in Pardah Poster">
+                    </div>
+                    <!-- New Horizontal Detail Panel -->
+                    <div class="horizontal-pop-up flex p-4 shadow-2xl">
+                        <div class="w-2/5 h-full rounded-l-md overflow-hidden mr-4">
+                             <!-- Expanded Image Preview -->
+                             <img src="oppenheimer.png" alt="American Prometheus Preview" class="w-full h-full object-cover">
+                        </div>
+                        <div class="w-3/5 space-y-2">
+                            <h3 class="text-2xl font-bold text-primary-red">American Prometheus</h3>
+                            <p class="text-xs text-white/70">2023 (Sundance Grand Jury Prize) | ROLE: CINEMATOGRAPHER</p>
+                           <p class="text-sm italic text-white/90">
+DESCRIPTION: A powerful documentary dissecting ambition, guilt, and the creation of destructive genius — a meditation on power, science, and the haunting cost of human progress.  
+</span>
+</p>
+
+                            <button class="px-3 py-1 bg-primary-red text-black font-semibold rounded-full text-xs hover:bg-white transition">
+                                VIEW DETAILS
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MOVIE CARD 3 - "A life in Pardah" -->
+                <div class="card-wrapper rounded-lg" tabindex="0" data-title="A Life in Pardah" data-year="2022" data-role="Stunt Coordinator">
+                    <div class="movie-card">
+                         <!-- Placeholder images used for demonstration -->
+                        <img src="life.png" alt="Tokyo Drift Nights Poster">
+                    </div>
+                    <!-- New Horizontal Detail Panel -->
+                    <div class="horizontal-pop-up flex p-4 shadow-2xl">
+                        <div class="w-2/5 h-full rounded-l-md overflow-hidden mr-4">
+                             <!-- Expanded Image Preview -->
+                             <img src="life.png" alt="Tokyo Drift Nights Preview" class="w-full h-full object-cover">
+                        </div>
+                        <div class="w-3/5 space-y-2">
+                            <h3 class="text-2xl font-bold text-primary-red">A life in Pardah</h3>
+                            <p class="text-xs text-white/70">2022 | ROLE: STUNT COORDINATOR</p>
+                            <p class="text-sm italic text-white/90">
+                               Examine the strict rule of afghan taliban and the woman oppression.
+                            </p>
+                            <button class="px-3 py-1 bg-primary-red text-black font-semibold rounded-full text-xs hover:bg-white transition">
+                                VIEW DETAILS
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MOVIE CARD 4 - "Psychological Neurosis in Pakistan" -->
+                <div class="card-wrapper rounded-lg" tabindex="0" data-title="Psychological Neurosis in Pakistan" data-year="2021" data-role="Main Villain">
+                    <div class="movie-card">
+                         <!-- Placeholder images used for demonstration -->
+                        <img src="psycho.png" alt="Psychological Neurosis in Pakistan">
+                    </div>
+                    <!-- New Horizontal Detail Panel -->
+                    <div class="horizontal-pop-up flex p-4 shadow-2xl">
+                        <div class="w-2/5 h-full rounded-l-md overflow-hidden mr-4">
+                             <!-- Expanded Image Preview -->
+                             <img src="psycho.png" alt="Psychological Neurosis in Pakistan Preview" class="w-full h-full object-cover">
+                        </div>
+                        <div class="w-3/5 space-y-2">
+                            <h3 class="text-2xl font-bold text-primary-red">Psychological Neurosis in Pakistan</h3>
+                            <p class="text-xs text-white/70">2021 | ROLE: MAIN VILLAIN</p>
+                           <p class="text-sm italic text-white/90">
+DESCRIPTION: A psychological odyssey tracing fractured minds within a crumbling society — exploring identity, faith, and collective madness through cinematic surrealism.  
+
+</p>
+
+                            <button class="px-3 py-1 bg-primary-red text-black font-semibold rounded-full text-xs hover:bg-white transition">
+                                VIEW DETAILS
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MOVIE CARD 5 - "RAT" -->
+                <div class="card-wrapper rounded-lg" tabindex="0" data-title="RAT" data-year="2020" data-role="Voice Actor">
+                    <div class="movie-card">
+                         <!-- Placeholder images used for demonstration -->
+                        <img src="rat.png" alt="Ghost in the Machine Poster">
+                    </div>
+                    <!-- New Horizontal Detail Panel -->
+                    <div class="horizontal-pop-up flex p-4 shadow-2xl">
+                        <div class="w-2/5 h-full rounded-l-md overflow-hidden mr-4">
+                             <!-- Expanded Image Preview -->
+                             <img src="rat.png" alt="Ghost in the Machine Preview" class="w-full h-full object-cover">
+                        </div>
+                        <div class="w-3/5 space-y-2">
+                            <h3 class="text-2xl font-bold text-primary-red">RAT</h3>
+                            <p class="text-xs text-white/70">2020 | ROLE: VOICE ACTOR</p>
+                            <p class="text-sm italic text-white/90">
+                                DESCRIPTION: Critically acclaimed sci-fi thriller about artificial consciousness and sentience.
+                            </p>
+                            <button class="px-3 py-1 bg-primary-red text-black font-semibold rounded-full text-xs hover:bg-white transition">
+                                VIEW DETAILS
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MOVIE CARD 6 - "REGRET" -->
+                <div class="card-wrapper rounded-lg" tabindex="0" data-title="REGRET" data-year="2019" data-role="Director">
+                    <div class="movie-card">
+                         <!-- Placeholder images used for demonstration -->
+                        <img src="ragret.png" alt="Zen of the Arrow Poster">
+                    </div>
+                    <!-- New Horizontal Detail Panel -->
+                    <div class="horizontal-pop-up flex p-4 shadow-2xl">
+                        <div class="w-2/5 h-full rounded-l-md overflow-hidden mr-4">
+                             <!-- Expanded Image Preview -->
+                             <img src="ragret.png" alt="Zen of the Arrow Preview" class="w-full h-full object-cover">
+                        </div>
+                        <div class="w-3/5 space-y-2">
+                            <h3 class="text-2xl font-bold text-primary-red">REGRET</h3>
+                            <p class="text-xs text-white/70">2019 | ROLE: DIRECTOR</p>
+                            <p class="text-sm italic text-white/90">
+                                DESCRIPTION: A meditative film focusing on the choices and decision we regret, the indecision to act. IT will make your rethink your life choices.
+                            </p>
+                            <button class="px-3 py-1 bg-primary-red text-black font-semibold rounded-full text-xs hover:bg-white transition">
+                                VIEW DETAILS
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- MOVIE CARD 7 - "Medhat: A life in picture" -->
+                <div class="card-wrapper rounded-lg" tabindex="0" data-title="Medhat: A Life in Picture" data-year="2025" data-role="Self">
+                    <div class="movie-card">
+                         <!-- Placeholder images used for demonstration -->
+                        <img src="medhat.png" alt="Lost in the Neon Poster">
+                    </div>
+                    <!-- New Horizontal Detail Panel -->
+                    <div class="horizontal-pop-up flex p-4 shadow-2xl">
+                        <div class="w-2/5 h-full rounded-l-md overflow-hidden mr-4">
+                             <!-- Expanded Image Preview -->
+                             <img src="medhat.png" alt="Lost in the Neon Preview" class="w-full h-full object-cover">
+                        </div>
+                        <div class="w-3/5 space-y-2">
+                            <h3 class="text-2xl font-bold text-primary-red">Medhat: A life in picture</h3>
+                            <p class="text-xs text-white/70">2025</p>
+                            <p class="text-sm italic text-white/90">
+                                Delves into the life of director Midhat. His life and philosphy when it comes to movie-making.
+                            </p>
+                            <button class="px-3 py-1 bg-primary-red text-black font-semibold rounded-full text-xs hover:bg-white transition">
+                                VIEW DETAILS
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Horizontal Rule Separator -->
+        <hr class="my-10 border-t border-primary-red/20">
+
+        <!-- Footer -->
+        <footer class="text-center py-6 text-xs text-white/50">
+            <p>&copy; 2025 MEDHAT FILMS</p>
+        </footer>
+
+    </div>
+
+  <script>
+    // Utility function to safely get the global variable
+    const getGlobal = (name) => typeof window !== 'undefined' && window[name] !== 'undefined' ? window[name] : null;
+
+    // --- Typewriter Effect Script ---
+    const titleElement = document.getElementById('culturalTitle');
+    const phrases = [
+        { text: "Medhat メンハト", steps: 16, duration: 1500, color: 'white' },
+        { text: "فیلم مدحت", steps: 4, duration: 1200, color: 'red' },
+        { text: "MEDHAT FILMS ", steps: 12, duration: 1800, color: 'white' }
+    ];
+
+    let phraseIndex = 0;
+
+    function typePhrase(index) {
+        if (index >= phrases.length) {
+            titleElement.style.borderRight = 'none';
+            return;
+        }
+
+        const { text, steps, duration, color } = phrases[index];
+
+        // 1️⃣ Fade out the current text smoothly
+        titleElement.style.animation = 'fade-out 0.4s ease forwards';
+        setTimeout(() => {
+            // 2️⃣ Prepare next phrase
+            titleElement.style.color = color;
+            titleElement.textContent = text;
+            titleElement.style.width = '0';
+            // Start typing animation
+            titleElement.style.animation = `
+                typing ${duration / 1000}s steps(${steps}, end) forwards,
+                blink-caret 0.75s step-end infinite
+            `;
+
+            // 3️⃣ Move to next phrase after typing
+            setTimeout(() => typePhrase(index + 1), duration + 800);
+        }, 400); // wait for fade-out to finish
+    }
+    
+    // --- New Navbar Scroll & Search Script ---
+    const fixedNavbar = document.getElementById('fixedNavbar');
+    const movieSearchInput = document.getElementById('movieSearchInput');
+    const movieCards = document.querySelectorAll('.card-wrapper');
+    const culturalTitle = document.getElementById('culturalTitle');
+
+    // 1. Navbar Blur Effect on Scroll
+    function handleScroll() {
+        // Use the distance to the culturalTitle as a trigger point
+        const titleBottom = culturalTitle.offsetTop + culturalTitle.offsetHeight;
+        
+        if (window.scrollY > titleBottom - 100) {
+            fixedNavbar.classList.add('scrolled');
+        } else {
+            fixedNavbar.classList.remove('scrolled');
+        }
+    }
+    
+    // 2. Search Functionality
+    function filterMovies() {
+        const query = movieSearchInput.value.toLowerCase().trim();
+
+        movieCards.forEach(card => {
+            const title = card.getAttribute('data-title')?.toLowerCase() || '';
+            const year = card.getAttribute('data-year') || '';
+            const role = card.getAttribute('data-role')?.toLowerCase() || '';
+            
+            // Safely check for the description element before accessing textContent
+            const descriptionElement = card.querySelector('.horizontal-pop-up p:last-child');
+            // FIX: Ensure correct selection of the description text within the pop-up
+            const description = descriptionElement ? descriptionElement.textContent.toLowerCase() : '';
+
+            // Check if the query is found in the title, year, role, or description
+            const isMatch = title.includes(query) || 
+                            year.includes(query) || 
+                            role.includes(query) ||
+                            description.includes(query);
+
+            card.style.display = isMatch ? 'block' : 'none';
+        });
+    }
+
+    // Initialize all listeners and effects on load
+    window.onload = () => {
+        // Start the typewriter effect
+        typePhrase(0);
+        
+        // Add scroll listener for the blur effect
+        window.addEventListener('scroll', handleScroll);
+        
+        // Add input listener for filtering
+        movieSearchInput.addEventListener('input', filterMovies);
+
+        // Ensure initial state is correct in case the user loads the page scrolled down
+        handleScroll();
+    };
+
+    // Replace placeholder images with actual file paths if they exist
+    document.querySelector('[data-title="In the Mood for Connection"] img:first-child').src = "dir.png";
+    document.querySelector('[data-title="In the Mood for Connection"] .horizontal-pop-up img').src = "dir.png";
+    
+    document.querySelector('[data-title="American Prometheus"] img:first-child').src = "oppenheimer.png";
+    document.querySelector('[data-title="American Prometheus"] .horizontal-pop-up img').src = "oppenheimer.png";
+    
+    document.querySelector('[data-title="A Life in Pardah"] img:first-child').src = "life.png";
+    document.querySelector('[data-title="A Life in Pardah"] .horizontal-pop-up img').src = "life.png";
+    
+    document.querySelector('[data-title="Psychological Neurosis in Pakistan"] img:first-child').src = "psycho.png";
+    document.querySelector('[data-title="Psychological Neurosis in Pakistan"] .horizontal-pop-up img').src = "psycho.png";
+    
+    document.querySelector('[data-title="RAT"] img:first-child').src = "rat.png";
+    document.querySelector('[data-title="RAT"] .horizontal-pop-up img').src = "rat.png";
+    
+    document.querySelector('[data-title="REGRET"] img:first-child').src = "ragret.png";
+    document.querySelector('[data-title="REGRET"] .horizontal-pop-up img').src = "ragret.png";
+    
+    document.querySelector('[data-title="Medhat: A Life in Picture"] img:first-child').src = "medhat.png";
+    document.querySelector('[data-title="Medhat: A Life in Picture"] .horizontal-pop-up img').src = "medhat.jpg";
+    
+</script>
+
+       
+</body>
+</html>
